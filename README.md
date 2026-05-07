@@ -16,7 +16,7 @@ Download a theme or create your own to make it look cute and nice.
 
 # Injector Usage
 
-Befored running, Please make sure Modrinth is already closed.
+Before running, Please make sure Modrinth is already closed.
 
 ```bash
 node injector.js
