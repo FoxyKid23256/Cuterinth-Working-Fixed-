@@ -17,7 +17,7 @@ Download a theme or create your own to make it look cute and nice.
 # Injector Usage
 
 ```bash
-node injector.js script.js
+node injector.js
 ```
 
 This will open Modrinth (if not already running) and execute the script.js code inside the console.
