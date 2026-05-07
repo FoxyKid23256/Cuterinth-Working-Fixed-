@@ -6,7 +6,8 @@ const http = require('http')
 const path = require('path')
 const WebSocket = require('ws')
 
-const code = fs.readFileSync(path.join(__dirname, 'default.js'), 'utf8')
+const scriptPath = process.argv[2] || 'default.js'
+const code = fs.readFileSync(path.join(__dirname, scriptPath), 'utf8')
 
 const exe = path.join(process.env.LOCALAPPDATA, 'Modrinth App', 'Modrinth App.exe')
 const debugPort = 9222

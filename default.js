@@ -1,4 +1,27 @@
 (function () {
+    function defaultThemeVars() {
+        return {
+            '--surface-1': '#1c1c1c',
+            '--surface-1-5': '#202020',
+            '--surface-2': '#242424',
+            '--surface-2-5': '#282828',
+            '--surface-3': '#2e2e2e',
+            '--surface-4': '#363636',
+            '--surface-5': '#424242',
+            '--color-text-primary': '#ffffff',
+            '--color-text-default': '#cccccc',
+            '--color-text-tertiary': '#999999',
+            '--color-red': '#ff496e',
+            '--color-orange': '#ffa347',
+            '--color-green': '#2dd4cc',
+            '--color-blue': '#4f9cff',
+            '--color-purple': '#a060ff',
+            '--color-gray': '#888888',
+            '--color-brand': '#4f9cff',
+            '--hover-brightness': '1.1'
+        };
+    }
+
     let data = localStorage.getItem('modded');
 
     if (!data) { // saving everything inside localStorage cause why not
