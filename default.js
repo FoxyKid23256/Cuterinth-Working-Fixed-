@@ -1,4 +1,42 @@
 (function () {
+    function defaultThemeVars() {
+        return {
+            '--font-primary': 'Inter',
+            '--font-secondary': 'Inter',
+            '--font-display': 'Inter',
+            '--color-red': '#ff496e',
+            '--color-red-bg': 'rgba(255, 73, 110, 0.2)',
+            '--color-green': '#0ba95b',
+            '--color-green-bg': 'rgba(11, 169, 91, 0.2)',
+            '--color-yellow': '#ffc629',
+            '--color-yellow-bg': 'rgba(255, 198, 41, 0.2)',
+            '--color-blue': '#299eff',
+            '--color-blue-bg': 'rgba(41, 159, 255, 0.2)',
+            '--color-orange': '#ff8e29',
+            '--color-orange-bg': 'rgba(255, 142, 41, 0.2)',
+            '--color-purple': '#9529ff',
+            '--color-purple-bg': 'rgba(149, 41, 255, 0.2)',
+            '--color-brand': '#30b27b',
+            '--color-brand-bg': 'rgba(48, 178, 123, 0.2)',
+            '--color-brand-text': '#fff',
+            '--color-text-default': '#b0bac5',
+            '--color-text-offset': '#96a2b0',
+            '--color-text-tertiary': '#818c99',
+            '--color-text-on-brand': '#fff',
+            '--color-button-bg': '#34363c',
+            '--color-button-bg-hover': '#3d3f46',
+            '--color-button-bg-active': '#45484e',
+            '--surface-1': '#16181c',
+            '--surface-2': '#1d2024',
+            '--surface-3': '#27292e',
+            '--surface-4': '#34363c',
+            '--background': '#0f1012',
+            '--border-color': 'rgba(84, 84, 84, 0.48)',
+            '--brand-gradient': 'linear-gradient(90deg, #30b27b, #2c9f7c)',
+            '--brand-gradient-border': 'rgba(48, 178, 123, 0.5)',
+        };
+    }
+
     let data = localStorage.getItem('modded');
 
     if (!data) { // saving everything inside localStorage cause why not
