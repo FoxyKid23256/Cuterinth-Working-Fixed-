@@ -11,6 +11,8 @@ A default theme is a JSON file structured like this:
 }
 ````
 
+Please run the install-node.bat to install NodeJS, this is what is required to run the Injetor.js.
+
 Every time you open it, Cuterinth will automatically launch Modrinth and inject its code.
 Download a theme or create your own to make it look cute and nice.
 
