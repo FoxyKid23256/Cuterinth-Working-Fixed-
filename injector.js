@@ -8,7 +8,21 @@ const WebSocket = require('ws')
 
 const code = fs.readFileSync(path.join(__dirname, 'default.js'), 'utf8')
 
-const exe = path.join(process.env.LOCALAPPDATA, 'Modrinth App', 'Modrinth App.exe')
+const possiblePaths = [
+  process.argv[2],
+  process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'Modrinth App', 'Modrinth App.exe'),
+  process.env.ProgramFiles && path.join(process.env.ProgramFiles, 'Modrinth App', 'Modrinth App.exe'),
+  process.env['ProgramFiles(x86)'] && path.join(process.env['ProgramFiles(x86)'], 'Modrinth App', 'Modrinth App.exe')
+].filter(Boolean);
+
+let exe;
+for (const p of possiblePaths) {
+  if (fs.existsSync(p)) {
+    exe = p;
+    break;
+  }
+}
+
 const debugPort = 9222
 
 function httpGet(url) {
@@ -26,6 +40,12 @@ function httpGet(url) {
 }
 
 async function main() {
+  try {
+    execSync('taskkill /F /IM "Modrinth App.exe"');
+  } catch (e) {
+    // The process might not be running, which is fine.
+  }
+
   if (!fs.existsSync(exe)) {
     console.error('Modrinth App not found at:', exe)
     process.exit(1)
@@ -35,11 +55,12 @@ async function main() {
     WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${debugPort}`
   })
 
-  spawn(exe, [], {
+  const child = spawn(exe, [], {
     detached: true,
     stdio: 'ignore',
     env: env
   })
+  child.unref()
 
   async function waitForCDP(retries) {
     for (var i = 0; i < retries; i++) {
@@ -47,7 +68,11 @@ async function main() {
         const targets = await httpGet('http://127.0.0.1:' + debugPort + '/json')
         const target = targets.find(function(t) { return t.url && t.url.includes('tauri.localhost') })
         if (target) return target
-      } catch (e) {}
+      } catch (e) {
+        if (e.code === 'ECONNREFUSED') {
+          console.error('Connection refused. Is the Modrinth App running with the debug port open?');
+        }
+      }
       await new Promise(function(r) { return setTimeout(r, 3000) })
     }
     process.exit(1)

@@ -283,12 +283,16 @@
     }
 
     function start() {
-        observerRoot = document.getElementById('app') || document.body;
-        observer.observe(observerRoot, { childList: true, subtree: true });
-        
-        injectCustomThemes();
-        patchAppVersion();
-        removeAds();
+        try {
+            observerRoot = document.getElementById('app') || document.body;
+            observer.observe(observerRoot, { childList: true, subtree: true });
+            
+            injectCustomThemes();
+            patchAppVersion();
+            removeAds();
+        } catch (e) {
+            console.error('[Cuterinth] An error occurred while initializing:', e);
+        }
     }
 
     if (document.readyState === 'loading') {
