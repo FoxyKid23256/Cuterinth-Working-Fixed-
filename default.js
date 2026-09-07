@@ -1,60 +1,57 @@
 (function () {
-    function defaultThemeVars() {
-        return {
-            '--font-primary': 'Inter',
-            '--font-secondary': 'Inter',
-            '--font-display': 'Inter',
-            '--color-red': '#ff496e',
-            '--color-red-bg': 'rgba(255, 73, 110, 0.2)',
-            '--color-green': '#0ba95b',
-            '--color-green-bg': 'rgba(11, 169, 91, 0.2)',
-            '--color-yellow': '#ffc629',
-            '--color-yellow-bg': 'rgba(255, 198, 41, 0.2)',
-            '--color-blue': '#299eff',
-            '--color-blue-bg': 'rgba(41, 159, 255, 0.2)',
-            '--color-orange': '#ff8e29',
-            '--color-orange-bg': 'rgba(255, 142, 41, 0.2)',
-            '--color-purple': '#9529ff',
-            '--color-purple-bg': 'rgba(149, 41, 255, 0.2)',
-            '--color-brand': '#30b27b',
-            '--color-brand-bg': 'rgba(48, 178, 123, 0.2)',
-            '--color-brand-text': '#fff',
-            '--color-text-default': '#b0bac5',
-            '--color-text-offset': '#96a2b0',
-            '--color-text-tertiary': '#818c99',
-            '--color-text-on-brand': '#fff',
-            '--color-button-bg': '#34363c',
-            '--color-button-bg-hover': '#3d3f46',
-            '--color-button-bg-active': '#45484e',
-            '--surface-1': '#16181c',
-            '--surface-2': '#1d2024',
-            '--surface-3': '#27292e',
-            '--surface-4': '#34363c',
-            '--background': '#0f1012',
-            '--border-color': 'rgba(84, 84, 84, 0.48)',
-            '--brand-gradient': 'linear-gradient(90deg, #30b27b, #2c9f7c)',
-            '--brand-gradient-border': 'rgba(48, 178, 123, 0.5)',
-        };
+    const persistedData = globalThis.__cuterinthPersistedData;
+    const storedData = persistedData || localStorage.getItem('modded');
+    let data = null;
+
+    try {
+        data = storedData ? JSON.parse(storedData) : null;
+    } catch {
+        data = null;
     }
 
-    let data = localStorage.getItem('modded');
-
-    if (!data) { // saving everything inside localStorage cause why not
+    if (!data || !Array.isArray(data.customThemes)) {
         data = {
             customTheme: null,
-            customThemes: [
-                {
-                    name: 'default',
-                    author: 'Modrinth App',
-                    vars: defaultThemeVars()
-                }
-            ],
+            customThemes: [],
         };
-        localStorage.setItem('modded', JSON.stringify(data));
     } else {
-        data = JSON.parse(data);
         if (data.customTheme === 'default') data.customTheme = null;
     }
+
+    const bundledThemes = Array.isArray(globalThis.__cuterinthBundledThemes)
+        ? globalThis.__cuterinthBundledThemes
+        : [];
+
+    for (const bundledTheme of bundledThemes) {
+        if (!bundledTheme || typeof bundledTheme.name !== 'string' ||
+            !bundledTheme.vars || typeof bundledTheme.vars !== 'object') {
+            continue;
+        }
+
+        const packagedTheme = { ...bundledTheme, _cuterinthBundled: true };
+        const existingIndex = data.customThemes.findIndex(theme => theme.name === bundledTheme.name);
+
+        if (existingIndex === -1) {
+            data.customThemes.push(packagedTheme);
+        } else if (data.customThemes[existingIndex]._cuterinthBundled) {
+            // Refresh bundled/downloaded presets while preserving user-imported themes.
+            data.customThemes[existingIndex] = packagedTheme;
+        }
+    }
+
+    function saveData() {
+        const serialized = JSON.stringify(data);
+        localStorage.setItem('modded', serialized);
+
+        if (typeof globalThis.cuterinthPersist === 'function') {
+            try {
+                globalThis.cuterinthPersist(serialized);
+            } catch {}
+        }
+    }
+
+    // Synchronize Modrinth's browser storage with Cuterinth's durable disk copy.
+    saveData();
 
     let inlinedProps = [];
 
@@ -122,12 +119,8 @@
         btn.style.position = 'relative';
 
         btn.innerHTML =
-            `<div data-v-ad9dd354="" class="preview" ` +
-                `style="background-color:${bgSurface3};` +
-                       `--color-button-bg:${btnBg};` +
-                       `--color-base:${textDefault};` +
-                       `--color-secondary:${textTert}">` +
-                `<div data-v-ad9dd354="" class="example-card card card" style="background-color:${bgSurface1}">` +
+            `<div data-v-ad9dd354="" class="preview">` +
+                `<div data-v-ad9dd354="" class="example-card card card">` +
                     `<div data-v-ad9dd354="" class="example-icon"></div>` +
                     `<div data-v-ad9dd354="" class="example-text-1"></div>` +
                     `<div data-v-ad9dd354="" class="example-text-2"></div>` +
@@ -135,8 +128,16 @@
             `</div>` +
             `<div data-v-ad9dd354="" class="label">` +
                 (isSelected ? svgRadioSelected : svgRadioEmpty) +
-                ` ${theme.name}` +
             `</div>`;
+
+        // Theme files supply data, never HTML markup.
+        const preview = btn.querySelector('.preview');
+        preview.style.backgroundColor = bgSurface3;
+        preview.style.setProperty('--color-button-bg', btnBg);
+        preview.style.setProperty('--color-base', textDefault);
+        preview.style.setProperty('--color-secondary', textTert);
+        btn.querySelector('.example-card').style.backgroundColor = bgSurface1;
+        btn.querySelector('.label').appendChild(document.createTextNode(` ${theme.name}`));
 
         const deleteBtn = document.createElement('button');
         deleteBtn.title = 'Delete theme';
@@ -160,7 +161,7 @@
                 data.customTheme = null;
                 clearInlinedVars();
             }
-            localStorage.setItem('modded', JSON.stringify(data));
+            saveData();
             injectCustomThemes();
         });
 
@@ -172,7 +173,7 @@
             btn.classList.add('selected');
             updateRadios(container);
             data.customTheme = theme.name;
-            localStorage.setItem('modded', JSON.stringify(data));
+            saveData();
             applyVars(theme.vars);
         });
 
@@ -204,7 +205,7 @@
             }
 
             data.customTheme = theme.name;
-            localStorage.setItem('modded', JSON.stringify(data));
+            saveData();
             applyVars(theme.vars);
 
             lastContainer = null;
@@ -244,6 +245,10 @@
 
     let observerRoot = null;
 
+    if (globalThis.__cuterinthObserver) {
+        globalThis.__cuterinthObserver.disconnect();
+    }
+
     const observer = new MutationObserver(() => {
         const container = document.querySelector('.theme-options');
         if (container && !container.querySelector('.modded-btn')) {
@@ -253,6 +258,7 @@
         removeAds();
         patchAppVersion();
     });
+    globalThis.__cuterinthObserver = observer;
 
     function injectCustomThemes() {
         const container = document.querySelector('.theme-options');
@@ -272,7 +278,7 @@
             btn.dataset.moddedPatched = '1';
             btn.addEventListener('click', () => {
                 data.customTheme = null;
-                localStorage.setItem('modded', JSON.stringify(data));
+                saveData();
                 clearInlinedVars();
                 container.querySelectorAll('.modded-btn')
                     .forEach(b => b.classList.remove('selected'));
@@ -321,16 +327,33 @@
     }
 
     function start() {
-        try {
-            observerRoot = document.getElementById('app') || document.body;
-            observer.observe(observerRoot, { childList: true, subtree: true });
-            
-            injectCustomThemes();
+        observerRoot = document.getElementById('app') || document.body;
+        observer.observe(observerRoot, { childList: true, subtree: true });
+        
+        injectCustomThemes();
+        patchAppVersion();
+        removeAds();
+
+        if (globalThis.__cuterinthMaintenanceTimer) {
+            clearInterval(globalThis.__cuterinthMaintenanceTimer);
+        }
+
+        globalThis.__cuterinthMaintenanceTimer = setInterval(() => {
+            const currentRoot = document.getElementById('app') || document.body;
+            if (currentRoot !== observerRoot) {
+                observer.disconnect();
+                observerRoot = currentRoot;
+                observer.observe(observerRoot, { childList: true, subtree: true });
+            }
+
+            const container = document.querySelector('.theme-options');
+            if (container && !container.querySelector('.modded-btn')) {
+                injectCustomThemes();
+            }
+
             patchAppVersion();
             removeAds();
-        } catch (e) {
-            console.error('[Cuterinth] An error occurred while initializing:', e);
-        }
+        }, 1000);
     }
 
     if (document.readyState === 'loading') {
