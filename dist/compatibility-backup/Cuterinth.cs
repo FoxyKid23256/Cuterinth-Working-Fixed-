@@ -34,23 +34,20 @@ internal static class Cuterinth
                 return;
             }
 
-            while (true)
+            try
             {
-                try
-                {
-                    Log("Cuterinth started.");
-                    RunAsync().GetAwaiter().GetResult();
-                    break;
-                }
-                catch (Exception exception)
-                {
-                    Log("Fatal error: " + exception);
-                    if (MessageBox.Show(exception.Message + "\n\nAfter resolving the problem, choose Retry to reconnect.",
-                        "Cuterinth", MessageBoxButtons.RetryCancel, MessageBoxIcon.Error) == DialogResult.Retry)
-                        continue;
-                    Environment.ExitCode = 1;
-                    break;
-                }
+                Log("Cuterinth started.");
+                RunAsync().GetAwaiter().GetResult();
+            }
+            catch (Exception exception)
+            {
+                Log("Fatal error: " + exception);
+                MessageBox.Show(
+                    exception.Message,
+                    "Cuterinth",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                Environment.ExitCode = 1;
             }
         }
     }
@@ -259,10 +256,10 @@ internal static class Cuterinth
             try
             {
                 string json;
-                using (var client = new System.Net.Http.HttpClient(new System.Net.Http.HttpClientHandler { UseProxy = false }))
+                using (var client = new WebClient())
                 {
-                    client.Timeout = TimeSpan.FromSeconds(2);
-                    json = await client.GetStringAsync(
+                    client.Proxy = null;
+                    json = await client.DownloadStringTaskAsync(
                         "http://127.0.0.1:" + DebugPort + "/json");
                 }
 
@@ -282,7 +279,7 @@ internal static class Cuterinth
                         object debuggerValue;
                         if (target.TryGetValue("url", out urlValue) &&
                             target.TryGetValue("webSocketDebuggerUrl", out debuggerValue) &&
-                            IsModrinthTarget(target, Convert.ToString(urlValue)))
+                            Convert.ToString(urlValue).IndexOf("tauri.localhost", StringComparison.OrdinalIgnoreCase) >= 0)
                         {
                             return Convert.ToString(debuggerValue);
                         }
@@ -299,22 +296,7 @@ internal static class Cuterinth
 
         string detail = lastError == null ? string.Empty : "\n\nLast error: " + lastError.Message;
         throw new InvalidOperationException(
-            "Cuterinth could not connect to Modrinth. An app update or an already-running copy can start Modrinth without theme support. Close Modrinth completely, then choose Retry." + detail);
-    }
-
-    private static bool IsModrinthTarget(Dictionary<string, object> target, string url)
-    {
-        Uri uri;
-        object type;
-        return target.TryGetValue("type", out type) && Equals(type, "page") &&
-            Uri.TryCreate(url, UriKind.Absolute, out uri) &&
-            string.Equals(uri.Host, "tauri.localhost", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string BuildBootstrap(JavaScriptSerializer serializer, string script, string savedData, string bundledThemes)
-    {
-        return "globalThis.__cuterinthPersistedData = " + serializer.Serialize(savedData) + ";\n" +
-            "globalThis.__cuterinthBundledThemes = " + bundledThemes + ";\n" + script;
+            "Cuterinth could not connect to Modrinth. Close Modrinth completely, then run Cuterinth again." + detail);
     }
 
     private static async Task InjectAndMonitorAsync(
@@ -338,7 +320,10 @@ internal static class Cuterinth
                 new Dictionary<string, object> { { "name", PersistenceBinding } });
             Log("Installed persistence binding.");
 
-            string bootstrap = BuildBootstrap(serializer, script, savedData, bundledThemes);
+            string bootstrap = "globalThis.__cuterinthPersistedData = " +
+                serializer.Serialize(savedData) + ";\n" +
+                "globalThis.__cuterinthBundledThemes = " + bundledThemes + ";\n" +
+                script;
 
             Dictionary<string, object> message = await SendCommandAsync(
                 socket,
@@ -352,9 +337,6 @@ internal static class Cuterinth
                     { "returnByValue", true }
                 });
             Log("Customization script evaluated.");
-
-            if (message.ContainsKey("error"))
-                throw new InvalidOperationException("Modrinth could not load Cuterinth: " + serializer.Serialize(message["error"]));
 
             object resultValue;
             if (message.TryGetValue("result", out resultValue))
@@ -370,7 +352,7 @@ internal static class Cuterinth
                 }
             }
 
-            await MonitorPersistenceAsync(socket, serializer, script, savedData, bundledThemes);
+            await MonitorPersistenceAsync(socket, serializer);
         }
     }
 
@@ -418,20 +400,15 @@ internal static class Cuterinth
 
     private static async Task MonitorPersistenceAsync(
         ClientWebSocket socket,
-        JavaScriptSerializer serializer,
-        string script,
-        string savedData,
-        string bundledThemes)
+        JavaScriptSerializer serializer)
     {
         int commandId = 3;
-        string lastSavedData = savedData;
+        string lastSavedData = null;
 
         try
         {
             while (socket.State == WebSocketState.Open)
             {
-                // Full page reloads discard injected code. Restore it using the latest selection,
-                // while keeping normal polling small and leaving Vue's navigation alone.
                 Dictionary<string, object> message = await SendCommandAsync(
                     socket,
                     serializer,
@@ -439,28 +416,11 @@ internal static class Cuterinth
                     "Runtime.evaluate",
                     new Dictionary<string, object>
                     {
-                        { "expression", "JSON.stringify({data:localStorage.getItem('modded'),ready:document.readyState !== 'loading',active:!!globalThis.__cuterinthVersion})" },
+                        { "expression", "localStorage.getItem('modded')" },
                         { "returnByValue", true }
                     });
 
-                string stateJson = GetEvaluationString(message);
-                if (stateJson == null) { await Task.Delay(2000); continue; }
-                var state = serializer.DeserializeObject(stateJson) as Dictionary<string, object>;
-                string currentData = state == null ? null : Convert.ToString(state["data"]);
-                if (state != null && Equals(state["ready"], true) && Equals(state["active"], false))
-                {
-                    string backup = string.IsNullOrWhiteSpace(currentData) ? lastSavedData : currentData;
-                    var restored = await SendCommandAsync(socket, serializer, commandId++, "Runtime.evaluate",
-                        new Dictionary<string, object> {
-                            { "expression", BuildBootstrap(serializer, script, backup, bundledThemes) },
-                            { "returnByValue", true }, { "awaitPromise", true }
-                        });
-                    object restoreResult;
-                    var evaluation = restored.TryGetValue("result", out restoreResult) ? restoreResult as Dictionary<string, object> : null;
-                    if (restored.ContainsKey("error") || (evaluation != null && evaluation.ContainsKey("exceptionDetails")))
-                        Log("Reload recovery failed: " + serializer.Serialize(restored));
-                    else Log("Restored customization after page reload.");
-                }
+                string currentData = GetEvaluationString(message);
                 if (!string.IsNullOrWhiteSpace(currentData) &&
                     !string.Equals(currentData, lastSavedData, StringComparison.Ordinal))
                 {

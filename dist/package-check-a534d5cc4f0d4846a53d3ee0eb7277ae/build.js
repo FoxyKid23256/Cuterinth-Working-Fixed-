@@ -8,7 +8,7 @@ const injector = fs.readFileSync('injector.js', 'utf8')
 
 const patched = injector.replace(
   /const code = fs\.readFileSync\(path\.join\(__dirname,\s*'default\.js'\),\s*'utf8'\)/,
-  () => `const code = ${JSON.stringify(script)}`
+  `const code = ${JSON.stringify(script)}`
 )
 
 if (patched === injector) {

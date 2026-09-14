@@ -18,7 +18,7 @@ This calculation is performed by Modrinth itself; on the tested library it took 
 
 ## Use the Windows app
 
-Download and extract the [Windows ZIP](https://github.com/FoxyKid23256/Cuterinth-Working-Fixed-/raw/refs/heads/main/dist/Cuterinth-Windows.zip), then open `Cuterinth.exe` (or
+Download and extract the Windows release, then open `Cuterinth.exe` (or
 `dist\Cuterinth.exe` after building from source). It launches Modrinth and loads Cuterinth automatically;
 Node.js is not required.
 

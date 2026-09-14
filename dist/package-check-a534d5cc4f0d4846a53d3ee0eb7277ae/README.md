@@ -1,24 +1,9 @@
 # Cuterinth
 Make Modrinth cuter, cleaner, and more customizable with themes and addons.
 
-## Compatibility update — September 14, 2026
-
-Verified with the installed Modrinth App **0.21.0** on Windows.
-
-- Theme previews inherit the current app's styling, including its settings dialog.
-- Switching back to a native theme restores its colors without leftover custom variables.
-- Invalid imports show an error, and deleted presets stay deleted on restart.
-- Theme controls mount when settings open, without a recurring whole-page scan.
-- The Windows launcher restores customization after a page reload. Connection errors
-  offer Retry, including when an updater restarts Modrinth without debugging enabled.
-
-Resource Management now shows a message while Modrinth calculates content storage.
-This calculation is performed by Modrinth itself; on the tested library it took about
-1.8 seconds. Cuterinth does not skip the calculation or substitute cached disk totals.
-
 ## Use the Windows app
 
-Download and extract the [Windows ZIP](https://github.com/FoxyKid23256/Cuterinth-Working-Fixed-/raw/refs/heads/main/dist/Cuterinth-Windows.zip), then open `Cuterinth.exe` (or
+Download and extract the Windows release, then open `Cuterinth.exe` (or
 `dist\Cuterinth.exe` after building from source). It launches Modrinth and loads Cuterinth automatically;
 Node.js is not required.
 
@@ -42,7 +27,6 @@ written to `%APPDATA%\Cuterinth\Cuterinth.log`.
 
 If Modrinth is already running, close it completely before opening Cuterinth so
 the required WebView debugging option can be enabled.
-If an update interrupts the connection, close Modrinth and choose **Retry** in Cuterinth.
 
 ## Build the EXE
 
@@ -60,13 +44,6 @@ Run the theme download/cache checks without launching Modrinth:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\test-themes.ps1
-```
-
-With Cuterinth and Modrinth running, run browser regression checks in an isolated
-test frame (using in-memory theme storage, without changing your saved themes):
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\test-browser.ps1
 ```
 
 # Cuterinth Themes
